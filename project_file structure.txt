@@ -1,0 +1,136 @@
+
+llm-iac-security/
+│
+├── README.md
+├── .env.example
+├── .gitignore
+├── requirements.txt
+├── setup.py
+├── Makefile
+│
+├── config/
+│   ├── __init__.py
+│   ├── settings.py                          # Global config (AWS region, model IDs, thresholds)
+│   ├── logging_config.py                    # Logging setup
+│   └── bedrock_config.py                    # Amazon Bedrock / Claude Sonnet 3.5 V2 config
+│
+├── agents/
+│   ├── __init__.py
+│   ├── base_agent.py                        # Abstract base class for all agents
+│   ├── retrieval_agent.py                   # RAG retrieval agent (OpenSearch + Titan Embeddings)
+│   ├── vulnerability_detection_agent.py     # Core LLM-based vulnerability detection agent
+│   └── report_generation_agent.py          # Report generation agent (Markdown output)
+│
+├── orchestrator/
+│   ├── __init__.py
+│   ├── pipeline.py                          # Main multi-agent pipeline orchestrator
+│   └── workflow_manager.py                  # Manages agent sequencing and state passing
+│
+├── knowledge_base/
+│   ├── __init__.py
+│   ├── kb_manager.py                        # CRUD for knowledge base entries
+│   ├── embeddings.py                        # Titan Text Embeddings V2 wrapper
+│   ├── vector_store.py                      # Amazon OpenSearch vector store integration
+│   ├── updater.py                           # Auto-update pipeline (fetches latest AWS docs)
+│   └── sources/
+│       ├── aws_well_architected.md          # AWS Well-Architected Framework snippets
+│       ├── cis_benchmarks.md               # CIS Benchmark guidelines
+│       ├── aws_secrets_manager.md          # AWS Secrets Manager best practices
+│       └── iam_best_practices.md           # IAM least-privilege guidelines
+│
+├── parsers/
+│   ├── __init__.py
+│   ├── base_parser.py                       # Abstract parser interface
+│   ├── cloudformation_parser.py            # CloudFormation YAML/JSON parser & normalizer
+│   ├── terraform_parser.py                  # (Future) Terraform HCL parser
+│   └── resource_extractor.py               # Extracts S3, IAM, SG, RDS resource attributes
+│
+├── llm/
+│   ├── __init__.py
+│   ├── bedrock_client.py                    # Amazon Bedrock API client wrapper
+│   ├── prompt_templates.py                  # System + user prompt templates
+│   ├── prompt_builder.py                    # Dynamic prompt construction with RAG context
+│   └── response_parser.py                  # Parses and structures LLM JSON/text responses
+│
+├── reporting/
+│   ├── __init__.py
+│   ├── report_builder.py                    # Assembles final vulnerability report
+│   ├── markdown_formatter.py               # Formats output as Markdown
+│   ├── severity_classifier.py              # Classifies findings as CRITICAL/HIGH/MEDIUM/LOW
+│   └── templates/
+│       ├── report_template.md              # Base Markdown report template
+│       └── summary_template.md            # Executive summary template
+│
+├── cicd/
+│   ├── __init__.py
+│   ├── pipeline_integration.py             # CI/CD hook entry point
+│   ├── github_actions/
+│   │   └── iac_security_scan.yml           # GitHub Actions workflow definition
+│   ├── gitlab_ci/
+│   │   └── .gitlab-ci.yml                  # GitLab CI pipeline definition
+│   └── jenkins/
+│       └── Jenkinsfile                      # Jenkins pipeline definition
+│
+├── storage/
+│   ├── __init__.py
+│   ├── s3_handler.py                        # S3 upload/download for reports & templates
+│   └── local_cache.py                       # Local caching layer for embeddings/responses
+│
+├── utils/
+│   ├── __init__.py
+│   ├── file_utils.py                        # File read/write helpers
+│   ├── aws_utils.py                         # Boto3 session helpers
+│   ├── validation.py                        # Input schema validators
+│   └── exceptions.py                        # Custom exception classes
+│
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py                          # Pytest fixtures and shared test config
+│   ├── unit/
+│   │   ├── test_cloudformation_parser.py
+│   │   ├── test_retrieval_agent.py
+│   │   ├── test_vulnerability_agent.py
+│   │   ├── test_report_generation_agent.py
+│   │   ├── test_prompt_builder.py
+│   │   └── test_severity_classifier.py
+│   ├── integration/
+│   │   ├── test_pipeline_end_to_end.py
+│   │   ├── test_rag_integration.py
+│   │   └── test_bedrock_client.py
+│   └── fixtures/
+│       ├── templates/
+│       │   ├── T1_basic_s3.yaml            # Test CloudFormation template 1
+│       │   ├── T2_iam_roles.yaml           # Test CloudFormation template 2
+│       │   ├── T3_security_groups.yaml     # Test CloudFormation template 3
+│       │   ├── T4_rds_encrypted.yaml       # Test CloudFormation template 4
+│       │   ├── T5_multi_resource.yaml      # Test CloudFormation template 5
+│       │   ├── T6_clean_template.yaml      # Clean template (no vulns) T6
+│       │   ├── T7_clean_template.yaml      # Clean template (no vulns) T7
+│       │   ├── T8_clean_template.yaml      # Clean template (no vulns) T8
+│       │   ├── T9_clean_template.yaml      # Clean template (no vulns) T9
+│       │   └── T10_clean_template.yaml     # Clean template (no vulns) T10
+│       └── ground_truth/
+│           └── annotations.json            # Human-annotated vulnerability ground truth
+│
+├── scripts/
+│   ├── setup_knowledge_base.py             # One-time KB initialization script
+│   ├── update_knowledge_base.py            # Scheduled KB update script
+│   ├── run_scan.py                          # CLI entry point for scanning a template
+│   └── evaluate_results.py                 # Computes precision, recall, F1 metrics
+│
+├── data/
+│   ├── raw/
+│   │   └── cloudformation_templates/       # Raw uploaded CloudFormation templates
+│   ├── processed/
+│   │   └── normalized_summaries/           # LLM-ready normalized template summaries
+│   └── reports/
+│       └── generated/                      # Final generated Markdown vulnerability reports
+│
+└── docs/
+    ├── architecture.md                      # System architecture and design decisions
+    ├── setup_guide.md                       # Environment setup instructions
+    ├── api_reference.md                     # Internal API reference
+    ├── agent_descriptions.md               # Detailed description of each agent
+    └── diagrams/
+        ├── system_workflow.png             # High-level workflow diagram (Figure 1 replica)
+        └── rag_pipeline.png                # RAG retrieval pipeline diagram

@@ -1,0 +1,11 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "T4 - RDS with encryption enabled (compliant)"
+Resources:
+  SecureRDS:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      StorageEncrypted: true
+      MasterUsername: admin
+      MasterUserPassword: !Ref DBPassword

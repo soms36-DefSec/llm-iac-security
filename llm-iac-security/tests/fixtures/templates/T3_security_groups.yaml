@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "T3 - Security groups with unrestricted ingress"
+Resources:
+  OpenSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0

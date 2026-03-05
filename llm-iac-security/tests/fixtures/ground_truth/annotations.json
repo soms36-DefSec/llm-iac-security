@@ -1,0 +1,41 @@
+{
+  "T1": {
+    "known_vulnerabilities": [
+      "T1-S3-NO-ENCRYPTION",
+      "T1-S3-NO-VERSIONING",
+      "T1-S3-PUBLIC-ACCESS"
+    ],
+    "detected_vulnerabilities": []
+  },
+  "T2": {
+    "known_vulnerabilities": [
+      "T2-IAM-WILDCARD-ACTION",
+      "T2-IAM-WILDCARD-PRINCIPAL"
+    ],
+    "detected_vulnerabilities": []
+  },
+  "T3": {
+    "known_vulnerabilities": [
+      "T3-SG-UNRESTRICTED-SSH",
+      "T3-SG-UNRESTRICTED-RDP"
+    ],
+    "detected_vulnerabilities": []
+  },
+  "T4": {
+    "known_vulnerabilities": [],
+    "detected_vulnerabilities": []
+  },
+  "T5": {
+    "known_vulnerabilities": [
+      "T5-S3-NO-ENCRYPTION",
+      "T5-IAM-WILDCARD",
+      "T5-SG-OPEN",
+      "T5-RDS-NO-ENC"
+    ],
+    "detected_vulnerabilities": []
+  },
+  "T6": {
+    "known_vulnerabilities": [],
+    "detected_vulnerabilities": []
+  }
+}

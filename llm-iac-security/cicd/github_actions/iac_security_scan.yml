@@ -1,0 +1,32 @@
+name: IaC Security Scan
+on:
+  pull_request:
+    paths: ["**/*.yaml","**/*.yml","**/*.json"]
+  push:
+    branches: [main]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install -r requirements.txt
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Run security scan
+        run: |
+          for t in $(find . -name "*.yaml" -path "*/cloudformation/*"); do
+            python scripts/run_scan.py "$t"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: data/reports/generated/

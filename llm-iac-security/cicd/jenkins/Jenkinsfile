@@ -1,0 +1,17 @@
+pipeline {
+    agent any
+    stages {
+        stage("Setup") { steps { sh "pip install -r requirements.txt" } }
+        stage("IaC Security Scan") {
+            steps {
+                withCredentials([usernamePassword(credentialsId: "aws-credentials",
+                    usernameVariable: "AWS_ACCESS_KEY_ID", passwordVariable: "AWS_SECRET_ACCESS_KEY")]) {
+                    sh "find . -name \"*.yaml\" -path \"*/cloudformation/*\" | xargs -I{} python scripts/run_scan.py {}"
+                }
+            }
+        }
+    }
+    post {
+        always { archiveArtifacts artifacts: "data/reports/generated/*.md", allowEmptyArchive: true }
+    }
+}

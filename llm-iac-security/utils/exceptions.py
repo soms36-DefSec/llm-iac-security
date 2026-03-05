@@ -1,0 +1,16 @@
+"""Custom exception hierarchy."""
+class IaCSecurityBaseError(Exception): pass
+class ParsingError(IaCSecurityBaseError): pass
+class UnsupportedTemplateFormatError(ParsingError): pass
+class LLMError(IaCSecurityBaseError): pass
+class LLMRateLimitError(LLMError): pass
+class LLMResponseParseError(LLMError): pass
+class KnowledgeBaseError(IaCSecurityBaseError): pass
+class EmbeddingError(KnowledgeBaseError): pass
+class VectorStoreError(KnowledgeBaseError): pass
+class AgentError(IaCSecurityBaseError): pass
+class RetrievalAgentError(AgentError): pass
+class VulnerabilityDetectionError(AgentError): pass
+class ReportGenerationError(AgentError): pass
+class StorageError(IaCSecurityBaseError): pass
+class ValidationError(IaCSecurityBaseError): pass

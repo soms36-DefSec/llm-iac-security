@@ -1,0 +1,10 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "T1 - Basic S3 bucket with misconfigurations"
+Resources:
+  PublicBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: my-public-bucket
+      AccessControl: PublicRead
+      VersioningConfiguration:
+        Status: Suspended

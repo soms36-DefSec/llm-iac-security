@@ -1,0 +1,11 @@
+stages: [security]
+iac-security-scan:
+  stage: security
+  image: python:3.11-slim
+  before_script: [pip install -r requirements.txt]
+  script:
+    - for t in $(find . -name "*.yaml" -path "*/cloudformation/*"); do python scripts/run_scan.py "$t"; done
+  artifacts:
+    paths: [data/reports/generated/]
+    expire_in: 30 days
+  only: [merge_requests, main]
