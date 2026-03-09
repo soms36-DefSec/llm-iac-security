@@ -1,7 +1,7 @@
 """Integration test stubs for RAG pipeline (requires live AWS)."""
 import pytest
 
-@pytest.mark.skip(reason="Requires live OpenSearch + Bedrock")
+@pytest.mark.skip(reason="Requires live Pinecone + Bedrock")
 def test_kb_retrieve_returns_strings():
     from knowledge_base.kb_manager import KnowledgeBaseManager
     kb = KnowledgeBaseManager()

@@ -9,11 +9,7 @@ class PromptBuilder:
     """Builds fully-formed prompts for each agent."""
     @staticmethod
     def build_vulnerability_detection(template_summary: str, rag_snippets: list[str]):
-        ctx = "
-
----
-
-".join(rag_snippets) if rag_snippets else "No context retrieved."
+        ctx = "\n\n---\n\n".join(rag_snippets) if rag_snippets else "No context retrieved."
         user = VULNERABILITY_DETECTION_USER.format(template_summary=template_summary, rag_context=ctx)
         return VULNERABILITY_DETECTION_SYSTEM, [{"role": "user", "content": user}]
 

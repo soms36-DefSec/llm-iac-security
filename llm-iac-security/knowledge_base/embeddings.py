@@ -12,7 +12,7 @@ class TitanEmbeddings:
     def __init__(self): self._client = get_client("bedrock-runtime")
 
     def embed(self, text: str) -> list[float]:
-        body = json.dumps({"inputText": text, "dimensions": 512, "normalize": True})
+        body = json.dumps({"inputText": text, "dimensions": 1024, "normalize": True})
         try:
             resp = self._client.invoke_model(
                 modelId=bedrock_config.embedding_model_id,

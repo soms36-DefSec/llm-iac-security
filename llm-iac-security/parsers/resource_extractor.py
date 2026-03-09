@@ -25,5 +25,4 @@ class ResourceExtractor:
             lines.append(f"Resource: {lid} (Type: {res.get('type', 'Unknown')})")
             for k, v in res.get("properties", {}).items():
                 lines.append(f"  {k}: {v}")
-        return "
-".join(lines)
+        return "\n".join(lines)
