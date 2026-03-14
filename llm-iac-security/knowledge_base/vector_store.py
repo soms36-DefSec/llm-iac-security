@@ -1,294 +1,175 @@
 """
-Vector Store Module — Stores and retrieves document embeddings by similarity.
+Vector Store Module — Stores and searches document embeddings using ChromaDB.
 
 What is a vector store?
-    A vector store is a specialized database for storing embedding vectors.
-    When you search, it finds the vectors that are most "similar" to your query
-    vector.  Similarity is measured using *cosine similarity* — two vectors
-    pointing in the same direction score close to 1.0 (very similar), while
-    unrelated vectors score close to 0.0.
+    A vector store is a database optimized for storing embedding vectors and
+    finding the ones most "similar" to a given query vector.  Similarity is
+    measured using cosine distance — two vectors pointing in roughly the same
+    direction are considered similar.
 
-This module supports two backends:
-    - LOCAL mode:  Uses FAISS (Facebook AI Similarity Search), an in-memory
-                   vector index that runs on your machine.  Great for
-                   development — no API keys or cloud services needed.
-    - AWS mode:    Uses Pinecone, a managed cloud vector database.
-                   Requires a Pinecone API key and internet access.
+Why ChromaDB?
+    ChromaDB is a free, open-source, embedded vector database that stores
+    data locally on disk.  No API keys or cloud accounts needed.  It also
+    handles embedding storage + metadata + similarity search in one package.
 
-The mode is determined by APP_MODE in your .env file (default: "local").
+Usage:
+    from knowledge_base.vector_store import VectorStore
+
+    store = VectorStore()
+    store.add_documents(
+        ids=["doc1_chunk0"],
+        texts=["S3 buckets should have encryption..."],
+        embeddings=[[0.12, -0.34, ...]],
+        metadatas=[{"source": "aws_well_architected.md"}],
+    )
+    results = store.similarity_search(query_embedding=[0.11, -0.33, ...], top_k=5)
 """
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from config.logging_config import get_logger
 from config.settings import settings
-from utils.exceptions import VectorStoreError
 
 logger = get_logger(__name__)
 
+# ChromaDB collection name for the IaC security knowledge base
+COLLECTION_NAME = "iac-security-kb"
 
-# ---------------------------------------------------------------------------
-# Abstract base — defines the interface every vector store must follow
-# ---------------------------------------------------------------------------
-class BaseVectorStore(ABC):
+
+class VectorStore:
     """
-    Base class for all vector store backends.
+    ChromaDB-backed vector store for similarity search.
 
-    Subclasses must implement:
-        ensure_index()    — Create/connect to the index
-        upsert(...)       — Add or update a document
-        search(...)       — Find the most similar documents to a query
-        clear()           — Remove all documents (useful for resetting)
+    Data is persisted to disk at  knowledge_base/.chromadb/  so you only need
+    to run the setup script once.  Subsequent runs will reuse the stored data.
     """
 
-    @abstractmethod
-    def ensure_index(self) -> None:
-        """Create the index if it does not exist, or connect to an existing one."""
-        ...
+    def __init__(self, persist_directory: str | Path | None = None):
+        """
+        Initialize the ChromaDB client and get (or create) the collection.
 
-    @abstractmethod
-    def upsert(self, doc_id: str, text: str, embedding: List[float], metadata: Dict[str, Any]) -> None:
-        """Insert or update a document in the index."""
-        ...
-
-    @abstractmethod
-    def search(self, query_embedding: List[float], top_k: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Return the top-k most similar documents to the query embedding."""
-        ...
-
-    @abstractmethod
-    def clear(self) -> None:
-        """Remove all documents from the index."""
-        ...
-
-
-# ---------------------------------------------------------------------------
-# LOCAL backend — FAISS (Facebook AI Similarity Search)
-# ---------------------------------------------------------------------------
-class FAISSVectorStore(BaseVectorStore):
-    """
-    In-memory vector store using FAISS.
-
-    Documents are stored in a Python dict alongside a FAISS index.
-    The index can optionally be saved to / loaded from disk so you
-    don't have to re-embed documents every time you restart.
-
-    FAISS is very fast for similarity search, even on CPU, but keeps
-    everything in RAM — fine for the small knowledge bases in this project.
-    """
-
-    def __init__(self, dimension: int):
-        self._dimension = dimension
-        self._top_k = settings.pinecone.top_k_results  # reuse the same setting
-        self._index = None
-        # We keep a parallel dict that maps integer position → document metadata
-        self._documents: Dict[int, Dict[str, Any]] = {}
-        # Maps doc_id string → integer position in the FAISS index
-        self._id_map: Dict[str, int] = {}
-        self._next_pos = 0
-        # Persistence path (inside the project's data directory)
-        self._persist_dir = Path(settings.app.knowledge_base_dir).parent / ".faiss_store"
-
-    def ensure_index(self) -> None:
-        """Create a new FAISS index (Inner Product type for cosine similarity on normalized vectors)."""
+        Args:
+            persist_directory: Where ChromaDB stores its data on disk.
+                               Defaults to  knowledge_base/.chromadb/  inside the project.
+        """
         try:
-            import faiss
-
-            # Inner Product on L2-normalized vectors is equivalent to cosine similarity
-            self._index = faiss.IndexFlatIP(self._dimension)
-            logger.info("faiss_index_created", dimension=self._dimension)
-
-            # Try to load persisted data if available
-            self._load_from_disk()
-        except ImportError as e:
-            raise VectorStoreError(
-                "faiss-cpu is required for local mode. "
-                "Install it with: pip install faiss-cpu"
-            ) from e
-        except Exception as e:
-            raise VectorStoreError(f"Failed to create FAISS index: {e}") from e
-
-    def upsert(self, doc_id: str, text: str, embedding: List[float], metadata: Dict[str, Any]) -> None:
-        """Add a document to the FAISS index."""
-        import numpy as np
-
-        if self._index is None:
-            raise VectorStoreError("Index not initialized. Call ensure_index() first.")
-
-        # Convert embedding to numpy array (FAISS expects float32)
-        vec = np.array([embedding], dtype=np.float32)
-
-        # If this doc_id already exists, we cannot easily remove from FAISS FlatIndex,
-        # so we just add it again (duplicates are acceptable for this use case).
-        pos = self._next_pos
-        self._index.add(vec)
-        self._documents[pos] = {"text": text, **metadata}
-        self._id_map[doc_id] = pos
-        self._next_pos += 1
-
-    def search(self, query_embedding: List[float], top_k: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Find the top-k most similar documents to the query embedding."""
-        import numpy as np
-
-        if self._index is None or self._index.ntotal == 0:
-            return []
-
-        k = min(top_k or self._top_k, self._index.ntotal)
-        query = np.array([query_embedding], dtype=np.float32)
-
-        # FAISS returns (distances, indices) arrays
-        distances, indices = self._index.search(query, k)
-
-        results = []
-        for dist, idx in zip(distances[0], indices[0]):
-            if idx == -1:
-                continue
-            doc = self._documents.get(int(idx), {})
-            if doc:
-                results.append({**doc, "_score": float(dist)})
-        return results
-
-    def clear(self) -> None:
-        """Remove all documents from the index."""
-        if self._index is not None:
-            self._index.reset()
-        self._documents.clear()
-        self._id_map.clear()
-        self._next_pos = 0
-        logger.info("faiss_index_cleared")
-
-    def save_to_disk(self) -> None:
-        """Persist the FAISS index and metadata to disk."""
-        import json
-        import faiss
-
-        if self._index is None:
-            return
-        self._persist_dir.mkdir(parents=True, exist_ok=True)
-        faiss.write_index(self._index, str(self._persist_dir / "index.faiss"))
-        with open(self._persist_dir / "metadata.json", "w", encoding="utf-8") as f:
-            json.dump(
-                {"documents": {str(k): v for k, v in self._documents.items()},
-                 "id_map": self._id_map, "next_pos": self._next_pos},
-                f, default=str,
+            import chromadb
+        except ImportError:
+            raise RuntimeError(
+                "chromadb is required.  Install with:\n"
+                "  pip install chromadb"
             )
-        logger.info("faiss_index_saved", path=str(self._persist_dir))
 
-    def _load_from_disk(self) -> None:
-        """Load a previously persisted FAISS index from disk if it exists."""
-        import json
-
-        index_path = self._persist_dir / "index.faiss"
-        meta_path = self._persist_dir / "metadata.json"
-        if not index_path.exists() or not meta_path.exists():
-            return
-        try:
-            import faiss
-
-            self._index = faiss.read_index(str(index_path))
-            with open(meta_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            self._documents = {int(k): v for k, v in data["documents"].items()}
-            self._id_map = data["id_map"]
-            self._next_pos = data["next_pos"]
-            logger.info("faiss_index_loaded", total=self._index.ntotal)
-        except Exception as e:
-            logger.warning("faiss_load_failed", error=str(e))
-
-
-# ---------------------------------------------------------------------------
-# AWS backend — Pinecone managed vector database
-# ---------------------------------------------------------------------------
-class PineconeVectorStore(BaseVectorStore):
-    """
-    Cloud-hosted vector store using Pinecone.
-
-    Pinecone stores your embeddings on managed servers so you don't have to
-    worry about persistence or scalability.  Requires a Pinecone API key.
-    """
-
-    def __init__(self, dimension: int = 1024):
-        self._dimension = dimension
-        cfg = settings.pinecone
-        self._index_name = cfg.index
-        self._top_k = cfg.top_k_results
-        try:
-            from pinecone import Pinecone
-
-            self._pc = Pinecone(api_key=cfg.api_key)
-            self._index = None
-        except Exception as e:
-            raise VectorStoreError(str(e)) from e
-
-    def ensure_index(self) -> None:
-        """Create the Pinecone index if it doesn't exist, then connect to it."""
-        try:
-            from pinecone import ServerlessSpec
-
-            existing_indexes = [idx.name for idx in self._pc.list_indexes()]
-            if self._index_name not in existing_indexes:
-                self._pc.create_index(
-                    name=self._index_name,
-                    dimension=self._dimension,
-                    metric="cosine",
-                    spec=ServerlessSpec(cloud="aws", region=settings.aws.region),
-                )
-                logger.info("pinecone_index_created", index=self._index_name)
-            self._index = self._pc.Index(self._index_name)
-        except Exception as e:
-            raise VectorStoreError(str(e)) from e
-
-    def upsert(self, doc_id: str, text: str, embedding: List[float], metadata: Dict[str, Any]) -> None:
-        """Insert or update a document in Pinecone."""
-        try:
-            self._index.upsert(
-                vectors=[{"id": doc_id, "values": embedding, "metadata": {"text": text, **metadata}}]
+        if persist_directory is None:
+            persist_directory = str(
+                Path(settings.app.knowledge_base_dir).parent / ".chromadb"
             )
-        except Exception as e:
-            raise VectorStoreError(str(e)) from e
 
-    def search(self, query_embedding: List[float], top_k: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Query Pinecone for the most similar documents."""
-        try:
-            resp = self._index.query(
-                vector=query_embedding,
-                top_k=top_k or self._top_k,
-                include_metadata=True,
-            )
-            return [match["metadata"] for match in resp["matches"] if "metadata" in match]
-        except Exception as e:
-            raise VectorStoreError(str(e)) from e
+        self._persist_dir = str(persist_directory)
+        logger.info("initializing_chromadb", persist_dir=self._persist_dir)
+
+        # PersistentClient saves data to disk automatically
+        self._client = chromadb.PersistentClient(path=self._persist_dir)
+        self._collection = None
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def initialize(self, collection_name: str = COLLECTION_NAME) -> None:
+        """
+        Get or create the ChromaDB collection.
+
+        A "collection" in ChromaDB is like a table — it holds all vectors
+        and their associated metadata under one name.
+        """
+        self._collection = self._client.get_or_create_collection(
+            name=collection_name,
+            metadata={"hnsw:space": "cosine"},  # use cosine similarity
+        )
+        logger.info(
+            "collection_ready",
+            name=collection_name,
+            count=self._collection.count(),
+        )
+
+    def add_documents(
+        self,
+        ids: List[str],
+        texts: List[str],
+        embeddings: List[List[float]],
+        metadatas: Optional[List[Dict[str, Any]]] = None,
+    ) -> None:
+        """
+        Add (or update) documents in the vector store.
+
+        Args:
+            ids:        Unique string IDs for each document chunk.
+            texts:      The raw text content of each chunk (stored for retrieval).
+            embeddings: Pre-computed embedding vectors for each chunk.
+            metadatas:  Optional list of metadata dicts (source file, category, etc.).
+        """
+        if self._collection is None:
+            raise RuntimeError("Call initialize() before adding documents.")
+
+        self._collection.upsert(
+            ids=ids,
+            documents=texts,
+            embeddings=embeddings,
+            metadatas=metadatas,
+        )
+        logger.info("documents_added", count=len(ids))
+
+    def similarity_search(
+        self,
+        query_embedding: List[float],
+        top_k: int = 5,
+    ) -> List[Dict[str, Any]]:
+        """
+        Find the top-k most similar document chunks to a query embedding.
+
+        Args:
+            query_embedding: The embedding vector of the search query.
+            top_k:           How many results to return (default 5).
+
+        Returns:
+            A list of dicts, each containing:
+                - "text":     The chunk's raw text.
+                - "metadata": The chunk's metadata dict.
+                - "distance": The cosine distance (lower = more similar).
+        """
+        if self._collection is None:
+            raise RuntimeError("Call initialize() before searching.")
+
+        results = self._collection.query(
+            query_embeddings=[query_embedding],
+            n_results=min(top_k, max(self._collection.count(), 1)),
+            include=["documents", "metadatas", "distances"],
+        )
+
+        # ChromaDB returns nested lists (one per query); we sent one query so unpack [0]
+        documents = results.get("documents", [[]])[0]
+        metadatas = results.get("metadatas", [[]])[0]
+        distances = results.get("distances", [[]])[0]
+
+        output = []
+        for text, meta, dist in zip(documents, metadatas, distances):
+            output.append({"text": text, "metadata": meta, "distance": dist})
+
+        return output
 
     def clear(self) -> None:
-        """Delete all vectors from the Pinecone index."""
-        try:
-            self._index.delete(delete_all=True)
-            logger.info("pinecone_index_cleared")
-        except Exception as e:
-            raise VectorStoreError(str(e)) from e
+        """Delete the entire collection (useful for re-initializing)."""
+        if self._collection is not None:
+            self._client.delete_collection(self._collection.name)
+            self._collection = None
+            logger.info("collection_cleared")
 
-
-# ---------------------------------------------------------------------------
-# Factory function — returns the right backend based on APP_MODE
-# ---------------------------------------------------------------------------
-def get_vector_store(dimension: int) -> BaseVectorStore:
-    """
-    Create and return the vector store backend matching the current APP_MODE setting.
-
-    Args:
-        dimension: The dimensionality of the embedding vectors to be stored.
-                   Must match the dimension produced by the embedding backend.
-    """
-    mode = settings.app.mode.lower()
-    if mode == "local":
-        logger.info("using_faiss_vector_store")
-        return FAISSVectorStore(dimension=dimension)
-    elif mode == "aws":
-        logger.info("using_pinecone_vector_store")
-        return PineconeVectorStore(dimension=dimension)
-    else:
-        raise VectorStoreError(f"Unknown APP_MODE '{mode}'. Use 'local' or 'aws'.")
+    def count(self) -> int:
+        """Return the number of document chunks currently stored."""
+        if self._collection is None:
+            return 0
+        return self._collection.count()

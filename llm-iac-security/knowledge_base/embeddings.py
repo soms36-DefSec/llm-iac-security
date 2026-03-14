@@ -3,174 +3,100 @@ Embeddings Module — Converts text into numerical vectors (embeddings).
 
 What are embeddings?
     Embeddings are lists of numbers that represent the *meaning* of a piece of text.
-    Texts with similar meanings will have similar embeddings, which lets us find
-    relevant documents by comparing their embeddings to a query's embedding.
+    Texts with similar meanings will have similar embeddings (close in vector space),
+    which lets us find relevant documents by comparing their embeddings to a query.
 
-This module supports two backends:
-    - LOCAL mode:  Uses HuggingFace's "all-MiniLM-L6-v2" model from the
-                   sentence-transformers library. Runs entirely on your machine
-                   — no internet or API keys required.  Produces 384-dimensional
-                   embeddings.
-    - AWS mode:    Uses Amazon Titan Text Embeddings V2 via AWS Bedrock.
-                   Requires valid AWS credentials and Bedrock access.
-                   Produces 1024-dimensional embeddings.
+This module uses HuggingFace's "all-MiniLM-L6-v2" model from the
+sentence-transformers library.  It runs entirely on your machine —
+no internet or API keys required after the first download (~80 MB).
+It produces 384-dimensional embedding vectors.
 
-The mode is determined by APP_MODE in your .env file (default: "local").
+Usage:
+    from knowledge_base.embeddings import EmbeddingModel
+
+    model = EmbeddingModel()
+    vector = model.generate_embedding("S3 bucket encryption")
+    vectors = model.generate_embeddings(["text1", "text2"])
 """
 
 from __future__ import annotations
 
-import json
-from abc import ABC, abstractmethod
 from typing import List
 
 from config.logging_config import get_logger
-from config.settings import settings
-from utils.exceptions import EmbeddingError
 
 logger = get_logger(__name__)
 
+# ---------------------------------------------------------------------------
+# Model name — a small, fast model that runs well on CPU
+# ---------------------------------------------------------------------------
+MODEL_NAME = "all-MiniLM-L6-v2"
+EMBEDDING_DIMENSION = 384
 
-# ---------------------------------------------------------------------------
-# Abstract base — defines the interface every embedding backend must follow
-# ---------------------------------------------------------------------------
-class BaseEmbeddings(ABC):
+
+class EmbeddingModel:
     """
-    Base class for all embedding providers.
+    Wrapper around sentence-transformers for generating text embeddings locally.
 
-    Every subclass must implement:
-        embed(text)       → list of floats  (single text)
-        embed_batch(texts) → list of list of floats  (multiple texts)
-    """
-
-    @abstractmethod
-    def embed(self, text: str) -> List[float]:
-        """Convert a single string into a numerical embedding vector."""
-        ...
-
-    @abstractmethod
-    def embed_batch(self, texts: List[str]) -> List[List[float]]:
-        """Convert a list of strings into a list of embedding vectors."""
-        ...
-
-    @property
-    @abstractmethod
-    def dimension(self) -> int:
-        """Return the dimensionality of the embedding vectors this backend produces."""
-        ...
-
-
-# ---------------------------------------------------------------------------
-# LOCAL backend — HuggingFace sentence-transformers (all-MiniLM-L6-v2)
-# ---------------------------------------------------------------------------
-class LocalEmbeddings(BaseEmbeddings):
-    """
-    Generates embeddings locally using the all-MiniLM-L6-v2 model.
-
-    This is a small, fast model that runs on CPU.  It produces 384-dimensional
-    vectors and is great for development and testing without AWS credentials.
+    The model is loaded once on initialization and reused for all subsequent
+    calls, which is much faster than reloading it every time.
     """
 
-    # The model name from HuggingFace Hub
-    MODEL_NAME = "all-MiniLM-L6-v2"
-    _DIMENSION = 384
+    def __init__(self, model_name: str = MODEL_NAME):
+        """
+        Load the embedding model into memory.
 
-    def __init__(self):
+        Args:
+            model_name: HuggingFace model identifier.  Defaults to all-MiniLM-L6-v2,
+                        which balances quality and speed on CPU hardware.
+        """
         try:
             from sentence_transformers import SentenceTransformer
 
-            logger.info("loading_local_embedding_model", model=self.MODEL_NAME)
-            self._model = SentenceTransformer(self.MODEL_NAME)
-        except ImportError as e:
-            raise EmbeddingError(
-                "sentence-transformers is required for local mode. "
-                "Install it with: pip install sentence-transformers"
-            ) from e
-        except Exception as e:
-            raise EmbeddingError(f"Failed to load local embedding model: {e}") from e
-
-    @property
-    def dimension(self) -> int:
-        return self._DIMENSION
-
-    def embed(self, text: str) -> List[float]:
-        """Embed a single text string using the local model."""
-        try:
-            # encode() returns a numpy array; we convert to a plain Python list
-            vector = self._model.encode(text, normalize_embeddings=True)
-            return vector.tolist()
-        except Exception as e:
-            raise EmbeddingError(f"Local embedding failed: {e}") from e
-
-    def embed_batch(self, texts: List[str]) -> List[List[float]]:
-        """Embed multiple texts in one call (more efficient than calling embed() in a loop)."""
-        try:
-            vectors = self._model.encode(texts, normalize_embeddings=True)
-            return [v.tolist() for v in vectors]
-        except Exception as e:
-            raise EmbeddingError(f"Local batch embedding failed: {e}") from e
-
-
-# ---------------------------------------------------------------------------
-# AWS backend — Amazon Titan Text Embeddings V2 via Bedrock
-# ---------------------------------------------------------------------------
-class TitanEmbeddings(BaseEmbeddings):
-    """
-    Generates embeddings using Amazon Titan Text Embeddings V2 through AWS Bedrock.
-
-    Requires:
-        - Valid AWS credentials (access key + secret, or an AWS profile)
-        - Access to the Bedrock service in your configured region
-    Produces 1024-dimensional normalized embedding vectors.
-    """
-
-    _DIMENSION = 1024
-
-    def __init__(self):
-        from config.bedrock_config import bedrock_config
-        from utils.aws_utils import get_client
-
-        self._model_id = bedrock_config.embedding_model_id
-        self._client = get_client("bedrock-runtime")
-
-    @property
-    def dimension(self) -> int:
-        return self._DIMENSION
-
-    def embed(self, text: str) -> List[float]:
-        """Send a single text to the Titan embedding API and return the vector."""
-        body = json.dumps({"inputText": text, "dimensions": self._DIMENSION, "normalize": True})
-        try:
-            resp = self._client.invoke_model(
-                modelId=self._model_id,
-                contentType="application/json",
-                accept="application/json",
-                body=body,
+            logger.info("loading_embedding_model", model=model_name)
+            self._model = SentenceTransformer(model_name)
+            self._dimension = EMBEDDING_DIMENSION
+            logger.info("embedding_model_loaded", model=model_name, dimension=self._dimension)
+        except ImportError:
+            raise RuntimeError(
+                "sentence-transformers is required.  Install with:\n"
+                "  pip install sentence-transformers"
             )
-            return json.loads(resp["body"].read())["embedding"]
-        except Exception as e:
-            raise EmbeddingError(str(e)) from e
 
-    def embed_batch(self, texts: List[str]) -> List[List[float]]:
-        """Embed multiple texts by calling the API once per text (Titan does not support native batching)."""
-        return [self.embed(t) for t in texts]
+    # ----- public API -----
 
+    @property
+    def dimension(self) -> int:
+        """Return the dimensionality of embeddings this model produces (384)."""
+        return self._dimension
 
-# ---------------------------------------------------------------------------
-# Factory function — returns the right backend based on APP_MODE
-# ---------------------------------------------------------------------------
-def get_embeddings() -> BaseEmbeddings:
-    """
-    Create and return the embedding backend matching the current APP_MODE setting.
+    def generate_embedding(self, text: str) -> List[float]:
+        """
+        Convert a single text string into an embedding vector.
 
-    Returns LocalEmbeddings when mode is "local", TitanEmbeddings when mode is "aws".
-    """
-    mode = settings.app.mode.lower()
-    if mode == "local":
-        logger.info("using_local_embeddings")
-        return LocalEmbeddings()
-    elif mode == "aws":
-        logger.info("using_aws_titan_embeddings")
-        return TitanEmbeddings()
-    else:
-        raise EmbeddingError(f"Unknown APP_MODE '{mode}'. Use 'local' or 'aws'.")
+        Args:
+            text: The text to embed (e.g., a document chunk or a search query).
+
+        Returns:
+            A list of 384 floats representing the text's meaning in vector space.
+        """
+        # encode() returns a numpy array; tolist() converts to plain Python list
+        # normalize_embeddings=True ensures cosine-similarity works correctly
+        vector = self._model.encode(text, normalize_embeddings=True)
+        return vector.tolist()
+
+    def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
+        """
+        Convert multiple texts into embedding vectors in a single batch.
+
+        Batching is more efficient than calling generate_embedding() in a loop
+        because the model can process multiple inputs in parallel on the GPU/CPU.
+
+        Args:
+            texts: A list of text strings to embed.
+
+        Returns:
+            A list of embedding vectors (each is a list of 384 floats).
+        """
+        vectors = self._model.encode(texts, normalize_embeddings=True)
+        return [v.tolist() for v in vectors]

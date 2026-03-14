@@ -16,26 +16,17 @@ awscli>=1.38.0
 
 
 # -----------------------------------------------------------------------------
-# Pinecone (Vector Store)
+# ChromaDB (Vector Store)
 # Used in: knowledge_base/vector_store.py, knowledge_base/kb_manager.py
-# Provides vector similarity search for RAG retrieval
+# Free, open-source embedded vector database — runs locally, no API keys
 # -----------------------------------------------------------------------------
-pinecone>=6.0.0
-
-
-# -----------------------------------------------------------------------------
-# FAISS (Local/Fallback Vector Search)
-# Used in: knowledge_base/vector_store.py (local dev / offline mode)
-# CPU-only build — swap for faiss-gpu if running on a GPU instance
-# -----------------------------------------------------------------------------
-faiss-cpu>=1.9.0
+chromadb>=1.0.0
 
 
 # -----------------------------------------------------------------------------
 # Text Embeddings (Sentence Transformers)
 # Used in: knowledge_base/embeddings.py
-# Wraps Titan Text Embeddings V2 calls; sentence-transformers used for
-# local testing and embedding normalization utilities
+# Local embedding model (all-MiniLM-L6-v2) — runs on CPU, no API keys
 # -----------------------------------------------------------------------------
 sentence-transformers>=3.4.0
 transformers>=4.51.0

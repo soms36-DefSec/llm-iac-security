@@ -34,9 +34,9 @@ class AppSettings(BaseModel):
     confidence_threshold: float = Field(default_factory=lambda: float(os.getenv("VULNERABILITY_CONFIDENCE_THRESHOLD", "0.7")))
     report_output_dir: Path = Field(default_factory=lambda: BASE_DIR / os.getenv("REPORT_OUTPUT_DIR", "data/reports/generated"))
     knowledge_base_dir: Path = BASE_DIR / "knowledge_base" / "sources"
-    # Mode determines which backends to use: "local" for HuggingFace + FAISS,
-    # "aws" for Amazon Titan Embeddings + Pinecone
-    mode: str = Field(default_factory=lambda: os.getenv("APP_MODE", "local"))
+    # Ollama settings for local LLM inference
+    ollama_base_url: str = Field(default_factory=lambda: os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
+    ollama_model: str = Field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "llama3"))
 
 class Settings(BaseModel):
     aws: AWSSettings = Field(default_factory=AWSSettings)
