@@ -1,6 +1,8 @@
+"""Bedrock configuration — only used in AWS mode."""
 from __future__ import annotations
 from dataclasses import dataclass
 from config.settings import settings
+
 
 @dataclass(frozen=True)
 class BedrockConfig:
@@ -17,4 +19,9 @@ class BedrockConfig:
                    embedding_model_id=b.embedding_model_id,
                    max_tokens=b.max_tokens, temperature=b.temperature)
 
-bedrock_config = BedrockConfig.from_settings()
+
+# Only instantiate if in AWS mode; local mode doesn't need Bedrock config
+if not settings.is_local:
+    bedrock_config = BedrockConfig.from_settings()
+else:
+    bedrock_config = None

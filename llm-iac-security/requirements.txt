@@ -24,8 +24,15 @@ pinecone>=6.0.0
 
 
 # -----------------------------------------------------------------------------
-# FAISS (Local/Fallback Vector Search)
+# ChromaDB (Local Vector Store — free mode)
 # Used in: knowledge_base/vector_store.py (local dev / offline mode)
+# Provides vector similarity search without any cloud dependency
+# -----------------------------------------------------------------------------
+chromadb>=0.4.0
+
+# -----------------------------------------------------------------------------
+# FAISS (Alternative Local Vector Search)
+# Used in: knowledge_base/vector_store.py (optional fallback)
 # CPU-only build — swap for faiss-gpu if running on a GPU instance
 # -----------------------------------------------------------------------------
 faiss-cpu>=1.9.0

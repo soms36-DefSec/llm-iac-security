@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(MODE=local python -m pytest tests/unit/ -v)"
+    ]
+  }
+}

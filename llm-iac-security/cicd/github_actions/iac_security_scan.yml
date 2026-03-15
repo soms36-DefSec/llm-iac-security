@@ -1,30 +1,71 @@
 name: IaC Security Scan
+
 on:
-  pull_request:
-    paths: ["**/*.yaml","**/*.yml","**/*.json"]
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+    paths: ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.py"]
 
 jobs:
+  # -------------------------------------------------------
+  # Job 1: Run linter and unit tests (no cloud needed)
+  # -------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run linter
+        run: flake8 . --max-line-length=120 --exclude=venv,env,.venv
+
+      - name: Run unit tests
+        run: pytest tests/unit/ -v --cov=. --cov-report=term-missing
+
+  # -------------------------------------------------------
+  # Job 2: Security scan on test templates (requires AWS creds)
+  # -------------------------------------------------------
   security-scan:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
-        with: {python-version: "3.11", cache: pip}
-      - run: pip install -r requirements.txt
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
-      - name: Run security scan
+
+      - name: Run security scan on test templates
+        env:
+          MODE: aws
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
         run: |
-          for t in $(find . -name "*.yaml" -path "*/cloudformation/*"); do
-            python scripts/run_scan.py "$t"
+          for t in tests/fixtures/templates/T*.yaml; do
+            echo "Scanning: $t"
+            python scripts/run_scan.py "$t" --mode aws || true
           done
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

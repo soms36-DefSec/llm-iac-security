@@ -85,6 +85,8 @@ storage/local_cache/
 *.faiss
 *.index
 embeddings_cache/
+.chroma_db/
+.cache/
 
 # =============================================================================
 # Logs

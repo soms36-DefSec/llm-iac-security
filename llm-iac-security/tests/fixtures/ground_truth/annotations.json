@@ -37,5 +37,21 @@
   "T6": {
     "known_vulnerabilities": [],
     "detected_vulnerabilities": []
+  },
+  "T7": {
+    "known_vulnerabilities": [],
+    "detected_vulnerabilities": []
+  },
+  "T8": {
+    "known_vulnerabilities": [],
+    "detected_vulnerabilities": []
+  },
+  "T9": {
+    "known_vulnerabilities": [],
+    "detected_vulnerabilities": []
+  },
+  "T10": {
+    "known_vulnerabilities": [],
+    "detected_vulnerabilities": []
   }
 }
