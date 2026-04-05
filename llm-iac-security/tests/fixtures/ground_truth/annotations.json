@@ -1,40 +1,206 @@
 {
   "T1": {
     "known_vulnerabilities": [
-      "T1-S3-NO-ENCRYPTION",
-      "T1-S3-NO-VERSIONING",
-      "T1-S3-PUBLIC-ACCESS"
+      {
+        "id": "T1-V1",
+        "resource": "MyS3Bucket",
+        "resource_type": "AWS::S3::Bucket",
+        "vulnerability_type": "MissingEncryption",
+        "severity": "HIGH",
+        "description": "S3 bucket has no server-side encryption configured."
+      },
+      {
+        "id": "T1-V2",
+        "resource": "MyS3Bucket",
+        "resource_type": "AWS::S3::Bucket",
+        "vulnerability_type": "PublicAccessEnabled",
+        "severity": "CRITICAL",
+        "description": "All four PublicAccessBlock flags are set to false."
+      },
+      {
+        "id": "T1-V3",
+        "resource": "MyS3Bucket",
+        "resource_type": "AWS::S3::Bucket",
+        "vulnerability_type": "MissingVersioning",
+        "severity": "MEDIUM",
+        "description": "S3 bucket versioning is not enabled."
+      }
     ],
     "detected_vulnerabilities": []
   },
   "T2": {
     "known_vulnerabilities": [
-      "T2-IAM-WILDCARD-ACTION",
-      "T2-IAM-WILDCARD-PRINCIPAL"
+      {
+        "id": "T2-V1",
+        "resource": "AdminRole",
+        "resource_type": "AWS::IAM::Role",
+        "vulnerability_type": "OverlyBroadTrustPolicy",
+        "severity": "HIGH",
+        "description": "AssumeRolePolicyDocument allows any principal ('*') to assume this role."
+      },
+      {
+        "id": "T2-V2",
+        "resource": "AdminRole",
+        "resource_type": "AWS::IAM::Role",
+        "vulnerability_type": "WildcardAction",
+        "severity": "CRITICAL",
+        "description": "IAM policy grants Action: '*' (all actions) on Resource: '*'."
+      },
+      {
+        "id": "T2-V3",
+        "resource": "AdminRole",
+        "resource_type": "AWS::IAM::Role",
+        "vulnerability_type": "MissingPermissionsBoundary",
+        "severity": "MEDIUM",
+        "description": "IAM role has no PermissionsBoundary defined."
+      },
+      {
+        "id": "T2-V4",
+        "resource": "EscalationPolicy",
+        "resource_type": "AWS::IAM::ManagedPolicy",
+        "vulnerability_type": "CompoundPrivilegeEscalation",
+        "severity": "CRITICAL",
+        "description": "Combination of iam:PassRole, iam:CreateRole, and sts:AssumeRole on '*' enables privilege escalation."
+      }
     ],
     "detected_vulnerabilities": []
   },
   "T3": {
     "known_vulnerabilities": [
-      "T3-SG-UNRESTRICTED-SSH",
-      "T3-SG-UNRESTRICTED-RDP"
+      {
+        "id": "T3-V1",
+        "resource": "OpenSG",
+        "resource_type": "AWS::EC2::SecurityGroup",
+        "vulnerability_type": "UnrestrictedSSHIngress",
+        "severity": "CRITICAL",
+        "description": "SSH (port 22) is open to 0.0.0.0/0."
+      },
+      {
+        "id": "T3-V2",
+        "resource": "OpenSG",
+        "resource_type": "AWS::EC2::SecurityGroup",
+        "vulnerability_type": "UnrestrictedRDPIngress",
+        "severity": "CRITICAL",
+        "description": "RDP (port 3389) is open to 0.0.0.0/0."
+      },
+      {
+        "id": "T3-V3",
+        "resource": "OpenSG",
+        "resource_type": "AWS::EC2::SecurityGroup",
+        "vulnerability_type": "UnrestrictedDBPortIngress",
+        "severity": "HIGH",
+        "description": "MySQL (port 3306) is open to 0.0.0.0/0."
+      },
+      {
+        "id": "T3-V4",
+        "resource": "OpenSG",
+        "resource_type": "AWS::EC2::SecurityGroup",
+        "vulnerability_type": "UnrestrictedEgress",
+        "severity": "MEDIUM",
+        "description": "All outbound traffic is allowed to 0.0.0.0/0 with no port restriction."
+      }
     ],
     "detected_vulnerabilities": []
   },
   "T4": {
-    "known_vulnerabilities": [],
+    "known_vulnerabilities": [
+      {
+        "id": "T4-V1",
+        "resource": "InsecureRDS",
+        "resource_type": "AWS::RDS::DBInstance",
+        "vulnerability_type": "MissingStorageEncryption",
+        "severity": "HIGH",
+        "description": "RDS instance StorageEncrypted is false."
+      },
+      {
+        "id": "T4-V2",
+        "resource": "InsecureRDS",
+        "resource_type": "AWS::RDS::DBInstance",
+        "vulnerability_type": "PubliclyAccessible",
+        "severity": "CRITICAL",
+        "description": "RDS instance is publicly accessible."
+      },
+      {
+        "id": "T4-V3",
+        "resource": "InsecureRDS",
+        "resource_type": "AWS::RDS::DBInstance",
+        "vulnerability_type": "MissingBackup",
+        "severity": "HIGH",
+        "description": "BackupRetentionPeriod is 0 — automated backups are disabled."
+      },
+      {
+        "id": "T4-V4",
+        "resource": "InsecureRDS",
+        "resource_type": "AWS::RDS::DBInstance",
+        "vulnerability_type": "MissingDeletionProtection",
+        "severity": "MEDIUM",
+        "description": "DeletionProtection is false."
+      }
+    ],
     "detected_vulnerabilities": []
   },
   "T5": {
     "known_vulnerabilities": [
-      "T5-S3-NO-ENCRYPTION",
-      "T5-IAM-WILDCARD",
-      "T5-SG-OPEN",
-      "T5-RDS-NO-ENC"
+      {
+        "id": "T5-V1",
+        "resource": "BadBucket",
+        "resource_type": "AWS::S3::Bucket",
+        "vulnerability_type": "MissingEncryption",
+        "severity": "HIGH",
+        "description": "S3 bucket has no server-side encryption configured."
+      },
+      {
+        "id": "T5-V2",
+        "resource": "WildcardRole",
+        "resource_type": "AWS::IAM::Role",
+        "vulnerability_type": "OverlyBroadTrustPolicy",
+        "severity": "HIGH",
+        "description": "AssumeRolePolicyDocument allows any principal ('*') to assume this role."
+      },
+      {
+        "id": "T5-V3",
+        "resource": "OpenSG",
+        "resource_type": "AWS::EC2::SecurityGroup",
+        "vulnerability_type": "UnrestrictedIngress",
+        "severity": "CRITICAL",
+        "description": "Security group allows all inbound traffic on all ports from 0.0.0.0/0."
+      },
+      {
+        "id": "T5-V4",
+        "resource": "UnencryptedDB",
+        "resource_type": "AWS::RDS::DBInstance",
+        "vulnerability_type": "MissingStorageEncryption",
+        "severity": "HIGH",
+        "description": "RDS instance StorageEncrypted is false."
+      },
+      {
+        "id": "T5-V5",
+        "resource": "BadBucket",
+        "resource_type": "AWS::S3::Bucket",
+        "vulnerability_type": "CompoundDataExposure",
+        "severity": "CRITICAL",
+        "description": "Unencrypted S3 bucket combined with wildcard IAM trust creates critical data exposure risk."
+      }
     ],
     "detected_vulnerabilities": []
   },
   "T6": {
+    "known_vulnerabilities": [],
+    "detected_vulnerabilities": []
+  },
+  "T7": {
+    "known_vulnerabilities": [],
+    "detected_vulnerabilities": []
+  },
+  "T8": {
+    "known_vulnerabilities": [],
+    "detected_vulnerabilities": []
+  },
+  "T9": {
+    "known_vulnerabilities": [],
+    "detected_vulnerabilities": []
+  },
+  "T10": {
     "known_vulnerabilities": [],
     "detected_vulnerabilities": []
   }

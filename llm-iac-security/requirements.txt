@@ -43,13 +43,15 @@ torch>=2.6.0                      # Backend for sentence-transformers (CPU build
 
 
 # -----------------------------------------------------------------------------
-# YAML / JSON Parsing (CloudFormation Templates)
-# Used in: parsers/cloudformation_parser.py, parsers/resource_extractor.py
+# YAML / JSON / HCL Parsing (CloudFormation + Terraform Templates)
+# Used in: parsers/cloudformation_parser.py, parsers/terraform_parser.py,
+#          parsers/resource_extractor.py
 # -----------------------------------------------------------------------------
 pypdf>=5.1.0                      # PDF extraction for knowledge base documents
 PyYAML>=6.0.2
 ruamel.yaml>=0.18.6               # Round-trip YAML parsing (preserves comments)
 jsonschema>=4.23.0                # JSON schema validation for CF template inputs
+python-hcl2>=4.3.0                # Terraform HCL2 parser for .tf file support
 
 
 # -----------------------------------------------------------------------------
@@ -141,6 +143,7 @@ pytest-asyncio>=0.25.0            # Async test support
 moto[s3,opensearch]>=5.0.24       # AWS service mocking (S3, OpenSearch)
 responses>=0.25.3                 # HTTP request mocking for updater tests
 freezegun>=1.5.1                  # Freeze time for deterministic test runs
+tenacity>=9.0.0                   # Retry logic with exponential back-off
 
 
 # -----------------------------------------------------------------------------

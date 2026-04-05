@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "T3 - Security groups with unrestricted ingress"
+Description: "T3 - Security groups with unrestricted ingress on multiple ports"
 Resources:
   OpenSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Open SG
+      GroupDescription: Intentionally open security group for testing
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
@@ -13,4 +13,11 @@ Resources:
         - IpProtocol: tcp
           FromPort: 3389
           ToPort: 3389
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
           CidrIp: 0.0.0.0/0

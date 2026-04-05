@@ -1,11 +1,24 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "T4 - RDS with encryption enabled (compliant)"
+Description: >
+  T4 - RDS instance with multiple misconfigurations.
+  Note: filename is intentionally misleading (matches paper corpus naming).
+Parameters:
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Default: insecure-placeholder
 Resources:
-  SecureRDS:
+  InsecureRDS:
     Type: AWS::RDS::DBInstance
     Properties:
       DBInstanceClass: db.t3.micro
       Engine: mysql
-      StorageEncrypted: true
+      EngineVersion: "8.0"
       MasterUsername: admin
       MasterUserPassword: !Ref DBPassword
+      StorageEncrypted: false
+      PubliclyAccessible: true
+      BackupRetentionPeriod: 0
+      DeletionProtection: false
+      MultiAZ: false
+      AllocatedStorage: "20"

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "T2 - Overly permissive IAM roles"
+Description: "T2 - Overly permissive IAM roles and policies"
 Resources:
   AdminRole:
     Type: AWS::IAM::Role
@@ -13,7 +13,21 @@ Resources:
       Policies:
         - PolicyName: AdminPolicy
           PolicyDocument:
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action: "*"
                 Resource: "*"
+
+  EscalationPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "iam:PassRole"
+              - "iam:CreateRole"
+              - "sts:AssumeRole"
+            Resource: "*"

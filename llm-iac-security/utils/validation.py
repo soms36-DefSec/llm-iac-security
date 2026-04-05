@@ -1,7 +1,7 @@
 from pathlib import Path
 from utils.exceptions import ValidationError
 
-SUPPORTED_EXTENSIONS = {".yaml", ".yml", ".json"}
+SUPPORTED_EXTENSIONS = {".yaml", ".yml", ".json", ".tf"}
 
 def validate_template_path(path):
     p = Path(path)

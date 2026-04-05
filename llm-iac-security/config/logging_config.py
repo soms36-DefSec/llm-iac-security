@@ -1,10 +1,13 @@
 from __future__ import annotations
-import logging, sys
+import logging
+import os
+import sys
 import structlog
-from config.settings import settings
+
 
 def configure_logging() -> None:
-    log_level = getattr(logging, settings.app.log_level.upper(), logging.INFO)
+    log_level_str = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_level = getattr(logging, log_level_str, logging.INFO)
     logging.basicConfig(format="%(message)s", stream=sys.stdout, level=log_level)
     structlog.configure(
         processors=[

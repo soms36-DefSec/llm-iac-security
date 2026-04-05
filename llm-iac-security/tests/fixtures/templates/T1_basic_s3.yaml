@@ -1,10 +1,12 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "T1 - Basic S3 bucket with misconfigurations"
+Description: "T1 - Basic S3 bucket with three known misconfigurations"
 Resources:
-  PublicBucket:
+  MyS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: my-public-bucket
-      AccessControl: PublicRead
-      VersioningConfiguration:
-        Status: Suspended
+      BucketName: my-insecure-bucket
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
