@@ -26,8 +26,18 @@ class TitanEmbeddings(BaseEmbeddings):
         self._client = get_client("bedrock-runtime")
         self._model_id = bedrock_config.embedding_model_id
 
+    def _build_request_body(self, text: str) -> str:
+        payload = {"inputText": text}
+
+        # Titan Text Embeddings V2 accepts output controls; G1 rejects them.
+        if "v2" in self._model_id:
+            payload["dimensions"] = 1024
+            payload["normalize"] = True
+
+        return json.dumps(payload)
+
     def embed(self, text: str) -> list[float]:
-        body = json.dumps({"inputText": text, "dimensions": 1024, "normalize": True})
+        body = self._build_request_body(text)
         try:
             resp = self._client.invoke_model(
                 modelId=self._model_id,
