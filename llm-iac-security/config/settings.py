@@ -11,14 +11,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class AWSSettings(BaseModel):
-    region: str = Field(default_factory=lambda: os.getenv("AWS_REGION", "us-east-1"))
+    region: str = Field(default_factory=lambda: os.getenv("AWS_REGION", "us-west-2"))
     access_key_id: Optional[str] = Field(default_factory=lambda: os.getenv("AWS_ACCESS_KEY_ID"))
     secret_access_key: Optional[str] = Field(default_factory=lambda: os.getenv("AWS_SECRET_ACCESS_KEY"))
     profile: Optional[str] = Field(default_factory=lambda: os.getenv("AWS_PROFILE"))
 
 
 class BedrockSettings(BaseModel):
-    model_id: str = Field(default_factory=lambda: os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0"))
+    model_id: str = Field(default_factory=lambda: os.getenv("BEDROCK_MODEL_ID", "global.anthropic.claude-sonnet-4-20250514-v1:0"))
     embedding_model_id: str = Field(default_factory=lambda: os.getenv("BEDROCK_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0"))
     max_tokens: int = 4096
     temperature: float = 0.0

@@ -8,8 +8,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import click
 from rich.console import Console
 from rich.panel import Panel
-from config.logging_config import configure_logging
-from orchestrator.pipeline import IaCSecurityPipeline
 
 console = Console()
 
@@ -27,6 +25,11 @@ def scan(template_path: Path, mode: str, output: Path, verbose: bool) -> None:
         os.environ["MODE"] = mode
     if verbose:
         os.environ["LOG_LEVEL"] = "DEBUG"
+
+    # Delay config-dependent imports until after CLI overrides are applied.
+    from config.logging_config import configure_logging
+    from orchestrator.pipeline import IaCSecurityPipeline
+
     configure_logging()
 
     current_mode = os.getenv("MODE", "local")

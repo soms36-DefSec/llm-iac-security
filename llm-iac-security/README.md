@@ -1,3 +1,13 @@
+# LLM IaC Security Scanner
+
+For the current implementation details, architecture, testing guide, and paper coverage, start here:
+
+- [Implementation and Verification Guide](C:\Users\veldh\Documents\llm-iac-security\llm-iac-security\docs\IMPLEMENTATION_GUIDE.md)
+
+Older sections in this README contain historical setup notes and may not reflect the current Sonnet 4 + Pinecone runtime exactly. Treat `config/settings.py`, `.env`, and the implementation guide as the source of truth.
+
+---
+
 All code changes are complete. Here's the **deployment procedure** for both environments:
 
 ---

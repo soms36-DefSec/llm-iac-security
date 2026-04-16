@@ -85,6 +85,7 @@ mdformat>=0.7.22                  # Programmatic Markdown formatting/normalizati
 requests>=2.32.0
 httpx>=0.28.0                     # Async-capable HTTP client (used for Bedrock streaming)
 aiohttp>=3.11.0                   # Async HTTP for parallel document fetching
+tenacity>=8.2.3                   # Retry logic for Bedrock and local LLM clients
 
 
 # -----------------------------------------------------------------------------

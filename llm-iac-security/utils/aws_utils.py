@@ -1,5 +1,6 @@
 """AWS session and client management — only used in AWS mode."""
 from __future__ import annotations
+import os
 from functools import lru_cache
 from typing import Optional
 import boto3
@@ -13,7 +14,17 @@ logger = get_logger(__name__)
 def _is_valid(val: Optional[str]) -> bool:
     if not val:
         return False
-    return "your_" not in val.lower() and "_here" not in val.lower()
+    normalized = val.strip()
+    if not normalized:
+        return False
+    return "your_" not in normalized.lower() and "_here" not in normalized.lower()
+
+
+def _clear_blank_aws_env_vars() -> None:
+    """Remove blank AWS env vars so botocore falls back to the default chain."""
+    for key in ("AWS_PROFILE", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"):
+        if os.getenv(key, "").strip() == "":
+            os.environ.pop(key, None)
 
 
 @lru_cache(maxsize=1)
@@ -24,13 +35,14 @@ def get_session() -> boto3.Session:
             "Set MODE=aws in .env or use --mode aws to use AWS services."
         )
 
+    _clear_blank_aws_env_vars()
     kwargs: dict = {"region_name": settings.aws.region}
 
     if _is_valid(settings.aws.access_key_id) and _is_valid(settings.aws.secret_access_key):
-        kwargs["aws_access_key_id"] = settings.aws.access_key_id
-        kwargs["aws_secret_access_key"] = settings.aws.secret_access_key
+        kwargs["aws_access_key_id"] = settings.aws.access_key_id.strip()
+        kwargs["aws_secret_access_key"] = settings.aws.secret_access_key.strip()
     elif _is_valid(settings.aws.profile):
-        kwargs["profile_name"] = settings.aws.profile
+        kwargs["profile_name"] = settings.aws.profile.strip()
 
     logger.info("creating_boto3_session", region=kwargs.get("region_name"),
                 has_keys=bool(kwargs.get("aws_access_key_id")),
