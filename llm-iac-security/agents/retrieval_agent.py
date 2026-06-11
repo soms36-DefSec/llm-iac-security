@@ -15,6 +15,13 @@ class RetrievalAgent(BaseAgent):
         normalized = context.get("normalized_template")
         if not normalized: raise RetrievalAgentError("'normalized_template' missing from context.")
         query = ResourceExtractor(normalized).to_summary_text()
+        static_findings = context.get("static_findings", [])
+        if static_findings:
+            finding_context = "\n".join(
+                f"{item.get('rule_id')}: {item.get('resource_id')} {item.get('title')}"
+                for item in static_findings[:20]
+            )
+            query = f"{query}\n\nStatic findings:\n{finding_context}"
         snippets = self._kb.retrieve(query)
         self.logger.info("retrieved_snippets", count=len(snippets))
         return {**context, "rag_snippets": snippets}

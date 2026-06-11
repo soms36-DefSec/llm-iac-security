@@ -21,6 +21,12 @@ def read_pdf(path: Union[str, Path]) -> str:
         raise ParsingError(f"Failed to read PDF {path}: {str(e)}") from e
 
 def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive.")
+    if overlap < 0:
+        raise ValueError("overlap must not be negative.")
+    if overlap >= chunk_size:
+        raise ValueError("overlap must be smaller than chunk_size.")
     chunks = []
     start = 0
     while start < len(text):

@@ -1,0 +1,39 @@
+{
+  "T1_basic_s3": {
+    "fixture_path": "tests/fixtures/templates/T1_basic_s3.yaml",
+    "expected_findings": [
+      {"rule_id": "AWS_S3_BUCKET_ENCRYPTION_MISSING", "resource_id": "PublicBucket", "severity": "HIGH"},
+      {"rule_id": "AWS_S3_PUBLIC_ACCESS_BLOCK_WEAK", "resource_id": "PublicBucket", "severity": "HIGH"}
+    ]
+  },
+  "T2_iam_roles": {
+    "fixture_path": "tests/fixtures/templates/T2_iam_roles.yaml",
+    "expected_findings": [
+      {"rule_id": "AWS_IAM_WILDCARD_ACTION", "resource_id": "AdminRole", "severity": "HIGH"},
+      {"rule_id": "AWS_IAM_WILDCARD_RESOURCE", "resource_id": "AdminRole", "severity": "HIGH"},
+      {"rule_id": "AWS_IAM_ADMIN_POLICY", "resource_id": "AdminRole", "severity": "CRITICAL"}
+    ]
+  },
+  "T3_security_groups": {
+    "fixture_path": "tests/fixtures/templates/T3_security_groups.yaml",
+    "expected_findings": [
+      {"rule_id": "AWS_SG_OPEN_SSH", "resource_id": "OpenSG", "severity": "HIGH"},
+      {"rule_id": "AWS_SG_OPEN_RDP", "resource_id": "OpenSG", "severity": "HIGH"}
+    ]
+  },
+  "T4_rds_encrypted": {
+    "fixture_path": "tests/fixtures/templates/T4_rds_encrypted.yaml",
+    "expected_findings": []
+  },
+  "T5_multi_resource": {
+    "fixture_path": "tests/fixtures/templates/T5_multi_resource.yaml",
+    "expected_findings": [
+      {"rule_id": "AWS_S3_BUCKET_ENCRYPTION_MISSING", "resource_id": "BadBucket", "severity": "HIGH"},
+      {"rule_id": "AWS_S3_PUBLIC_ACCESS_BLOCK_WEAK", "resource_id": "BadBucket", "severity": "HIGH"},
+      {"rule_id": "AWS_SG_OPEN_SSH", "resource_id": "OpenSG", "severity": "HIGH"},
+      {"rule_id": "AWS_SG_OPEN_RDP", "resource_id": "OpenSG", "severity": "HIGH"},
+      {"rule_id": "AWS_SG_OPEN_ALL_TRAFFIC", "resource_id": "OpenSG", "severity": "CRITICAL"},
+      {"rule_id": "AWS_RDS_STORAGE_ENCRYPTION_DISABLED", "resource_id": "UnencryptedDB", "severity": "HIGH"}
+    ]
+  }
+}

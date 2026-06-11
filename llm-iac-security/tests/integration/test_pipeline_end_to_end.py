@@ -20,6 +20,29 @@ def cf_template(tmp_path):
     return p
 
 
+@pytest.fixture
+def secure_cf_template(tmp_path):
+    p = tmp_path / "secure.yaml"
+    p.write_text(textwrap.dedent("""
+        AWSTemplateFormatVersion: "2010-09-09"
+        Resources:
+          B:
+            Type: AWS::S3::Bucket
+            Properties:
+              BucketName: secure-test
+              BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                  - ServerSideEncryptionByDefault:
+                      SSEAlgorithm: AES256
+              PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
+    """))
+    return p
+
+
 def test_pipeline(cf_template):
     mock_kb = MagicMock()
     mock_kb.retrieve.return_value = ["Use encryption."]
@@ -34,7 +57,7 @@ def test_pipeline(cf_template):
     assert "findings" in r and "report_markdown" in r
 
 
-def test_pipeline_clean_template(cf_template):
+def test_pipeline_clean_template(secure_cf_template):
     mock_kb = MagicMock()
     mock_kb.retrieve.return_value = []
 
@@ -45,5 +68,5 @@ def test_pipeline_clean_template(cf_template):
     with patch("agents.retrieval_agent.KnowledgeBaseManager", return_value=mock_kb), \
          patch("agents.vulnerability_detection_agent.get_llm_client", return_value=mock_llm), \
          patch("agents.report_generation_agent.get_llm_client", return_value=mock_llm):
-        r = IaCSecurityPipeline().run(cf_template)
+        r = IaCSecurityPipeline().run(secure_cf_template)
     assert len(r["findings"]["vulnerabilities"]) == 0

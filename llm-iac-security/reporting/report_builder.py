@@ -13,8 +13,12 @@ class ReportBuilder:
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
     def save(self, markdown: str, template_name: str) -> Path:
-        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
         path = self._output_dir / f"{template_name}_{ts}.md"
+        counter = 1
+        while path.exists():
+            path = self._output_dir / f"{template_name}_{ts}_{counter}.md"
+            counter += 1
         write_text(path, markdown)
         logger.info("report_saved", path=str(path))
         return path

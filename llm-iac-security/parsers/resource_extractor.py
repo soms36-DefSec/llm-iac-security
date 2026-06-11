@@ -1,5 +1,7 @@
 from __future__ import annotations
 from typing import Any
+from static_analysis.rules.generic_secret_rules import SUSPICIOUS_KEY
+from static_analysis.base_rule import mask_secret
 
 RESOURCE_TYPE_MAP = {
     "s3": "AWS::S3::", "iam": "AWS::IAM::",
@@ -22,7 +24,17 @@ class ResourceExtractor:
     def to_summary_text(self) -> str:
         lines = []
         for lid, res in self._resources.items():
-            lines.append(f"Resource: {lid} (Type: {res.get('type', 'Unknown')})")
+            lines.append(f"Resource: {lid} (Type: {res.get('type') or res.get('resource_type', 'Unknown')})")
             for k, v in res.get("properties", {}).items():
-                lines.append(f"  {k}: {v}")
+                lines.append(f"  {k}: {_safe_summary_value(k, v)}")
         return "\n".join(lines)
+
+
+def _safe_summary_value(key: str, value: Any) -> Any:
+    if SUSPICIOUS_KEY.search(key):
+        return mask_secret(value)
+    if isinstance(value, dict):
+        return {child_key: _safe_summary_value(str(child_key), child_value) for child_key, child_value in value.items()}
+    if isinstance(value, list):
+        return [_safe_summary_value(key, item) for item in value]
+    return value

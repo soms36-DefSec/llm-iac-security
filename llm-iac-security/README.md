@@ -2,7 +2,8 @@
 
 For the current implementation details, architecture, testing guide, and paper coverage, start here:
 
-- [Implementation and Verification Guide](C:\Users\veldh\Documents\llm-iac-security\llm-iac-security\docs\IMPLEMENTATION_GUIDE.md)
+- [Implementation and Verification Guide](docs/IMPLEMENTATION_GUIDE.md)
+- [Hybrid IaC Security Scanner Implementation Guide](docs/HYBRID_IAC_SECURITY_SCANNER_GUIDE.md)
 
 Older sections in this README contain historical setup notes and may not reflect the current Sonnet 4 + Pinecone runtime exactly. Treat `config/settings.py`, `.env`, and the implementation guide as the source of truth.
 
@@ -145,6 +146,8 @@ python scripts/evaluate_results.py
 ```bash
 # Basic scan (uses MODE from .env)
 python scripts/run_scan.py <template.yaml>
+python scripts/run_scan.py <main.tf>
+python scripts/run_scan.py <terraform-directory>
 
 # Override mode via CLI
 python scripts/run_scan.py <template.yaml> --mode local
@@ -152,6 +155,11 @@ python scripts/run_scan.py <template.yaml> --mode aws
 
 # Custom output path
 python scripts/run_scan.py <template.yaml> --output report.md
+python scripts/run_scan.py <terraform-directory> --json-output results.json
+
+# Static and hybrid modes
+python scripts/run_scan.py tests/fixtures/terraform/vulnerable/aws_s3_public_unencrypted --static-only
+python scripts/run_scan.py tests/fixtures/templates/T1_basic_s3.yaml --hybrid
 
 # Verbose/debug logging
 python scripts/run_scan.py <template.yaml> --verbose
@@ -161,6 +169,127 @@ make scan TEMPLATE=tests/fixtures/templates/T1_basic_s3.yaml MODE=local
 make test
 make setup-kb
 ```
+
+---
+
+## Current Hybrid IaC Scanner
+
+The scanner now supports both AWS CloudFormation and Terraform. CloudFormation support is preserved, and Terraform `.tf` files or directories containing `.tf` files are selected automatically by the parser factory.
+
+```mermaid
+flowchart LR
+  A["IaC Input"] --> B["Parser Factory"]
+  B --> C["Normalized IaC Model"]
+  C --> D["Static Rule Engine"]
+  D --> E["Retrieval Agent"]
+  E --> F["Hybrid LLM Reasoning Agent"]
+  F --> G["Report Generator"]
+  G --> H["Metrics / Evaluation"]
+```
+
+### Static Rules
+
+The deterministic rule engine runs before any LLM call and works offline. Implemented rules include:
+
+| Area | Rule IDs |
+|------|----------|
+| AWS S3 | `AWS_S3_BUCKET_ENCRYPTION_MISSING`, `AWS_S3_PUBLIC_ACCESS_BLOCK_WEAK` |
+| AWS IAM | `AWS_IAM_WILDCARD_ACTION`, `AWS_IAM_WILDCARD_RESOURCE`, `AWS_IAM_ADMIN_POLICY` |
+| AWS Network | `AWS_SG_OPEN_SSH`, `AWS_SG_OPEN_RDP`, `AWS_SG_OPEN_ALL_TRAFFIC` |
+| AWS RDS | `AWS_RDS_STORAGE_ENCRYPTION_DISABLED`, `AWS_RDS_PUBLICLY_ACCESSIBLE` |
+| Azure Storage | `AZURE_STORAGE_PUBLIC_NETWORK_ACCESS`, `AZURE_STORAGE_MIN_TLS_WEAK` |
+| Azure Key Vault | `AZURE_KEYVAULT_PURGE_PROTECTION_DISABLED`, `AZURE_KEYVAULT_PUBLIC_NETWORK_ACCESS` |
+| Azure Network | `AZURE_NSG_OPEN_SSH`, `AZURE_NSG_OPEN_RDP`, `AZURE_NSG_OPEN_ALL_TRAFFIC` |
+| GCP Storage/KMS | `GCP_STORAGE_PUBLIC_IAM`, `GCP_KMS_ROTATION_MISSING` |
+| GCP Network | `GCP_FIREWALL_OPEN_SSH`, `GCP_FIREWALL_OPEN_RDP`, `GCP_FIREWALL_OPEN_ALL_TRAFFIC` |
+| Kubernetes | `K8S_PRIVILEGED_CONTAINER`, `K8S_HOST_NETWORK_ENABLED`, `K8S_ALLOW_PRIVILEGE_ESCALATION`, `K8S_RUN_AS_ROOT`, `K8S_DANGEROUS_CAPABILITIES` |
+| Generic secrets | `GENERIC_HARDCODED_SECRET` |
+
+Static-only mode never calls the LLM:
+
+```bash
+python scripts/run_scan.py path/to/iac --static-only
+```
+
+Hybrid mode runs static rules first, retrieves relevant guidance, then asks the LLM to validate, deduplicate, explain, and enrich findings:
+
+```bash
+python scripts/run_scan.py path/to/iac --hybrid
+```
+
+If retrieval or LLM enrichment is unavailable, the scanner returns static findings and clearly marks enrichment as skipped.
+
+### IaC Risk Explainer + Auto-Fix Assistant
+
+Every finding is enriched with cloud-engineer focused context:
+
+- Plain-language risk explanation
+- Likely attack path
+- Business impact
+- Compliance mapping hints
+- Safe auto-fix guidance with an IaC snippet
+- OPA/Rego policy-as-code guardrail starter
+
+This enrichment runs in both static-only and hybrid modes, so it works even when the LLM is unavailable.
+
+### Evaluation
+
+Run evaluation against CloudFormation and Terraform fixtures:
+
+```bash
+python scripts/evaluate_results.py
+python scripts/evaluate_results.py --iac terraform
+python scripts/evaluate_results.py --iac cloudformation
+python scripts/evaluate_results.py --mode static-only
+python scripts/evaluate_results.py --mode hybrid-mocked
+```
+
+Evaluation writes JSON results to:
+
+```text
+data/reports/generated/evaluation_results.json
+```
+
+Metrics include true positives, false positives, false negatives, precision, recall, F1, per-rule metrics, per-template metrics, average latency, and total scan time.
+
+### Adding Static Rules
+
+1. Add a new rule class under `static_analysis/rules/`.
+2. Inherit from `StaticRule`.
+3. Accept the normalized `IaCTemplate`.
+4. Return `StaticFinding` objects using `self.finding(...)`.
+5. Register the rule in `static_analysis/engine.py`.
+6. Add focused unit tests and fixture coverage.
+
+### Adding Terraform Fixtures
+
+Add vulnerable or clean fixtures under:
+
+```text
+tests/fixtures/terraform/vulnerable/<case>/main.tf
+tests/fixtures/terraform/clean/<case>/main.tf
+```
+
+Then add expected findings to:
+
+```text
+tests/fixtures/ground_truth/terraform_annotations.json
+```
+
+Expected finding matches use `rule_id` and `resource_id`, for example:
+
+```json
+{"rule_id": "AWS_S3_BUCKET_ENCRYPTION_MISSING", "resource_id": "aws_s3_bucket.logs", "severity": "HIGH"}
+```
+
+### Current Scope Boundaries
+
+- Terraform parsing depends on `python-hcl2`; the scanner now resolves common variables, locals, interpolation, conditionals, indexing, `jsonencode(...)`, and common functions such as `format`, `join`, `merge`, `lookup`, `coalesce`, and casing/conversion helpers.
+- Terraform resource/data block lines and nested property line numbers are captured in normalized resource metadata.
+- Static rules cover AWS plus Azure Storage, Azure Key Vault, Azure NSG, GCP Storage IAM, GCP Firewall, GCP KMS, and Kubernetes workload security checks.
+- The static scanner remains offline and deterministic. It does not download remote modules, contact providers, or replace `terraform plan` for computed runtime values.
+- Hybrid LLM reasoning validates and enriches findings but static findings remain the baseline.
+- Secret-looking values are masked in findings and prompt summaries, but raw IaC files should still be handled as sensitive input.
 
 ---
 

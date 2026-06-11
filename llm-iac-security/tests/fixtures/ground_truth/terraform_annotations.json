@@ -1,0 +1,133 @@
+{
+  "vulnerable/aws_s3_public_unencrypted": {
+    "fixture_path": "tests/fixtures/terraform/vulnerable/aws_s3_public_unencrypted",
+    "expected_findings": [
+      {"rule_id": "AWS_S3_BUCKET_ENCRYPTION_MISSING", "resource_id": "aws_s3_bucket.logs", "severity": "HIGH"},
+      {"rule_id": "AWS_S3_PUBLIC_ACCESS_BLOCK_WEAK", "resource_id": "aws_s3_bucket.logs", "severity": "HIGH"}
+    ]
+  },
+  "vulnerable/aws_iam_wildcard": {
+    "fixture_path": "tests/fixtures/terraform/vulnerable/aws_iam_wildcard",
+    "expected_findings": [
+      {"rule_id": "AWS_IAM_WILDCARD_ACTION", "resource_id": "aws_iam_policy.admin_like", "severity": "HIGH"},
+      {"rule_id": "AWS_IAM_WILDCARD_RESOURCE", "resource_id": "aws_iam_policy.admin_like", "severity": "HIGH"},
+      {"rule_id": "AWS_IAM_ADMIN_POLICY", "resource_id": "aws_iam_policy.admin_like", "severity": "CRITICAL"}
+    ]
+  },
+  "vulnerable/aws_security_group_open": {
+    "fixture_path": "tests/fixtures/terraform/vulnerable/aws_security_group_open",
+    "expected_findings": [
+      {"rule_id": "AWS_SG_OPEN_SSH", "resource_id": "aws_security_group.open_admin", "severity": "HIGH"},
+      {"rule_id": "AWS_SG_OPEN_RDP", "resource_id": "aws_security_group.open_admin", "severity": "HIGH"}
+    ]
+  },
+  "vulnerable/aws_rds_public_unencrypted": {
+    "fixture_path": "tests/fixtures/terraform/vulnerable/aws_rds_public_unencrypted",
+    "expected_findings": [
+      {"rule_id": "AWS_RDS_STORAGE_ENCRYPTION_DISABLED", "resource_id": "aws_db_instance.customer_db", "severity": "HIGH"},
+      {"rule_id": "AWS_RDS_PUBLICLY_ACCESSIBLE", "resource_id": "aws_db_instance.customer_db", "severity": "HIGH"}
+    ]
+  },
+  "vulnerable/multi_resource_vulnerable": {
+    "fixture_path": "tests/fixtures/terraform/vulnerable/multi_resource_vulnerable",
+    "expected_findings": [
+      {"rule_id": "AWS_S3_BUCKET_ENCRYPTION_MISSING", "resource_id": "aws_s3_bucket.logs", "severity": "HIGH"},
+      {"rule_id": "AWS_S3_PUBLIC_ACCESS_BLOCK_WEAK", "resource_id": "aws_s3_bucket.logs", "severity": "HIGH"},
+      {"rule_id": "AWS_IAM_WILDCARD_ACTION", "resource_id": "aws_iam_policy.wildcard", "severity": "HIGH"},
+      {"rule_id": "AWS_IAM_WILDCARD_RESOURCE", "resource_id": "aws_iam_policy.wildcard", "severity": "HIGH"},
+      {"rule_id": "AWS_SG_OPEN_SSH", "resource_id": "aws_security_group.open_all", "severity": "HIGH"},
+      {"rule_id": "AWS_SG_OPEN_RDP", "resource_id": "aws_security_group.open_all", "severity": "HIGH"},
+      {"rule_id": "AWS_SG_OPEN_ALL_TRAFFIC", "resource_id": "aws_security_group.open_all", "severity": "CRITICAL"},
+      {"rule_id": "AWS_RDS_STORAGE_ENCRYPTION_DISABLED", "resource_id": "aws_db_instance.customer_db", "severity": "HIGH"},
+      {"rule_id": "AWS_RDS_PUBLICLY_ACCESSIBLE", "resource_id": "aws_db_instance.customer_db", "severity": "HIGH"},
+      {"rule_id": "GENERIC_HARDCODED_SECRET", "resource_id": "aws_secretsmanager_secret_version.example", "severity": "HIGH"}
+    ]
+  },
+  "vulnerable/azure_storage_public_weak_tls": {
+    "fixture_path": "tests/fixtures/terraform/vulnerable/azure_storage_public_weak_tls",
+    "expected_findings": [
+      {"rule_id": "AZURE_STORAGE_PUBLIC_NETWORK_ACCESS", "resource_id": "azurerm_storage_account.logs", "severity": "HIGH"},
+      {"rule_id": "AZURE_STORAGE_MIN_TLS_WEAK", "resource_id": "azurerm_storage_account.logs", "severity": "MEDIUM"}
+    ]
+  },
+  "vulnerable/azure_key_vault_public_no_purge": {
+    "fixture_path": "tests/fixtures/terraform/vulnerable/azure_key_vault_public_no_purge",
+    "expected_findings": [
+      {"rule_id": "AZURE_KEYVAULT_PURGE_PROTECTION_DISABLED", "resource_id": "azurerm_key_vault.main", "severity": "HIGH"},
+      {"rule_id": "AZURE_KEYVAULT_PUBLIC_NETWORK_ACCESS", "resource_id": "azurerm_key_vault.main", "severity": "HIGH"}
+    ]
+  },
+  "vulnerable/azure_nsg_open_admin": {
+    "fixture_path": "tests/fixtures/terraform/vulnerable/azure_nsg_open_admin",
+    "expected_findings": [
+      {"rule_id": "AZURE_NSG_OPEN_SSH", "resource_id": "azurerm_network_security_group.web", "severity": "HIGH"},
+      {"rule_id": "AZURE_NSG_OPEN_RDP", "resource_id": "azurerm_network_security_group.web", "severity": "HIGH"},
+      {"rule_id": "AZURE_NSG_OPEN_ALL_TRAFFIC", "resource_id": "azurerm_network_security_group.web", "severity": "CRITICAL"}
+    ]
+  },
+  "vulnerable/gcp_storage_public_iam": {
+    "fixture_path": "tests/fixtures/terraform/vulnerable/gcp_storage_public_iam",
+    "expected_findings": [
+      {"rule_id": "GCP_STORAGE_PUBLIC_IAM", "resource_id": "google_storage_bucket_iam_binding.public", "severity": "HIGH"}
+    ]
+  },
+  "vulnerable/gcp_firewall_open_kms_no_rotation": {
+    "fixture_path": "tests/fixtures/terraform/vulnerable/gcp_firewall_open_kms_no_rotation",
+    "expected_findings": [
+      {"rule_id": "GCP_FIREWALL_OPEN_SSH", "resource_id": "google_compute_firewall.open", "severity": "HIGH"},
+      {"rule_id": "GCP_FIREWALL_OPEN_RDP", "resource_id": "google_compute_firewall.open", "severity": "HIGH"},
+      {"rule_id": "GCP_FIREWALL_OPEN_ALL_TRAFFIC", "resource_id": "google_compute_firewall.open", "severity": "CRITICAL"},
+      {"rule_id": "GCP_KMS_ROTATION_MISSING", "resource_id": "google_kms_crypto_key.app", "severity": "MEDIUM"}
+    ]
+  },
+  "vulnerable/kubernetes_privileged_host_network": {
+    "fixture_path": "tests/fixtures/terraform/vulnerable/kubernetes_privileged_host_network",
+    "expected_findings": [
+      {"rule_id": "K8S_PRIVILEGED_CONTAINER", "resource_id": "kubernetes_pod.app", "severity": "HIGH"},
+      {"rule_id": "K8S_HOST_NETWORK_ENABLED", "resource_id": "kubernetes_pod.app", "severity": "MEDIUM"},
+      {"rule_id": "K8S_ALLOW_PRIVILEGE_ESCALATION", "resource_id": "kubernetes_pod.app", "severity": "HIGH"},
+      {"rule_id": "K8S_RUN_AS_ROOT", "resource_id": "kubernetes_pod.app", "severity": "HIGH"},
+      {"rule_id": "K8S_DANGEROUS_CAPABILITIES", "resource_id": "kubernetes_pod.app", "severity": "HIGH"}
+    ]
+  },
+  "clean/aws_s3_secure": {
+    "fixture_path": "tests/fixtures/terraform/clean/aws_s3_secure",
+    "expected_findings": []
+  },
+  "clean/aws_iam_least_privilege": {
+    "fixture_path": "tests/fixtures/terraform/clean/aws_iam_least_privilege",
+    "expected_findings": []
+  },
+  "clean/aws_security_group_restricted": {
+    "fixture_path": "tests/fixtures/terraform/clean/aws_security_group_restricted",
+    "expected_findings": []
+  },
+  "clean/aws_rds_private_encrypted": {
+    "fixture_path": "tests/fixtures/terraform/clean/aws_rds_private_encrypted",
+    "expected_findings": []
+  },
+  "clean/azure_storage_private_modern_tls": {
+    "fixture_path": "tests/fixtures/terraform/clean/azure_storage_private_modern_tls",
+    "expected_findings": []
+  },
+  "clean/azure_key_vault_private_purge_protected": {
+    "fixture_path": "tests/fixtures/terraform/clean/azure_key_vault_private_purge_protected",
+    "expected_findings": []
+  },
+  "clean/azure_nsg_restricted": {
+    "fixture_path": "tests/fixtures/terraform/clean/azure_nsg_restricted",
+    "expected_findings": []
+  },
+  "clean/gcp_storage_private_iam": {
+    "fixture_path": "tests/fixtures/terraform/clean/gcp_storage_private_iam",
+    "expected_findings": []
+  },
+  "clean/gcp_firewall_restricted_kms_rotation": {
+    "fixture_path": "tests/fixtures/terraform/clean/gcp_firewall_restricted_kms_rotation",
+    "expected_findings": []
+  },
+  "clean/kubernetes_restricted_workload": {
+    "fixture_path": "tests/fixtures/terraform/clean/kubernetes_restricted_workload",
+    "expected_findings": []
+  }
+}
